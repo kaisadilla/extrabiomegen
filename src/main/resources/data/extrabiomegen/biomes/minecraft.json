@@ -1,0 +1,258 @@
+[
+    {
+        "id": "minecraft:badlands",
+        "color": "#da4516"
+    },
+    {
+        "id": "minecraft:bamboo_jungle",
+        "color": "#849500"
+    },
+    {
+        "id": "minecraft:basalt_deltas",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:beach",
+        "color": "#fbdf56"
+    },
+    {
+        "id": "minecraft:birch_forest",
+        "color": "#307545"
+    },
+    {
+        "id": "minecraft:cherry_grove",
+        "color": "#fe91c8"
+    },
+    {
+        "id": "minecraft:cold_ocean",
+        "color": "#202070"
+    },
+    {
+        "id": "minecraft:crimson_forest",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:dark_forest",
+        "color": "#3f5219"
+    },
+    {
+        "id": "minecraft:deep_cold_ocean",
+        "color": "#202038"
+    },
+    {
+        "id": "minecraft:deep_dark",
+        "color": "#000000"
+    },
+    {
+        "id": "minecraft:deep_frozen_ocean",
+        "color": "#404090"
+    },
+    {
+        "id": "minecraft:deep_lukewarm_ocean",
+        "color": "#000040"
+    },
+    {
+        "id": "minecraft:deep_ocean",
+        "color": "#000030"
+    },
+    {
+        "id": "minecraft:desert",
+        "color": "#fabc17"
+    },
+    {
+        "id": "minecraft:dripstone_caves",
+        "color": "#c1a58f"
+    },
+    {
+        "id": "minecraft:end_barrens",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:end_highlands",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:end_midlands",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:eroded_badlands",
+        "color": "#ff6d3d"
+    },
+    {
+        "id": "minecraft:flower_forest",
+        "color": "#2c8e49"
+    },
+    {
+        "id": "minecraft:forest",
+        "color": "#056621"
+    },
+    {
+        "id": "minecraft:frozen_ocean",
+        "color": "#7070d6"
+    },
+    {
+        "id": "minecraft:frozen_peaks",
+        "color": "#b1b3ce"
+    },
+    {
+        "id": "minecraft:frozen_river",
+        "color": "#a0a1fe"
+    },
+    {
+        "id": "minecraft:grove",
+        "color": "#46726c"
+    },
+    {
+        "id": "minecraft:ice_spikes",
+        "color": "#b5dede"
+    },
+    {
+        "id": "minecraft:jagged_peaks",
+        "color": "#dbdcc8"
+    },
+    {
+        "id": "minecraft:jungle",
+        "color": "#507c0b"
+    },
+    {
+        "id": "minecraft:lukewarm_ocean",
+        "color": "#000090"
+    },
+    {
+        "id": "minecraft:lush_caves",
+        "color": "#df9634"
+    },
+    {
+        "id": "minecraft:mangrove_swamp",
+        "color": "#2bce90"
+    },
+    {
+        "id": "minecraft:meadow",
+        "color": "#60a444"
+    },
+    {
+        "id": "minecraft:mushroom_fields",
+        "color": "#ff00ff"
+    },
+    {
+        "id": "minecraft:nether_wastes",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:ocean",
+        "color": "#000070"
+    },
+    {
+        "id": "minecraft:old_growth_birch_forest",
+        "color": "#5b9b6a"
+    },
+    {
+        "id": "minecraft:old_growth_pine_taiga",
+        "color": "#596551"
+    },
+    {
+        "id": "minecraft:old_growth_spruce_taiga",
+        "color": "#828e7a"
+    },
+    {
+        "id": "minecraft:plains",
+        "color": "#8eb561"
+    },
+    {
+        "id": "minecraft:river",
+        "color": "#0201ff"
+    },
+    {
+        "id": "minecraft:savanna",
+        "color": "#beb260"
+    },
+    {
+        "id": "minecraft:savanna_plateau",
+        "color": "#a89f62"
+    },
+    {
+        "id": "minecraft:small_end_islands",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:snowy_beach",
+        "color": "#faf0bf"
+    },
+    {
+        "id": "minecraft:snowy_plains",
+        "color": "#ffffff"
+    },
+    {
+        "id": "minecraft:snowy_slopes",
+        "color": "#c4c4c4"
+    },
+    {
+        "id": "minecraft:snowy_taiga",
+        "color": "#31554b"
+    },
+    {
+        "id": "minecraft:soul_sand_valley",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:sparse_jungle",
+        "color": "#60930e"
+    },
+    {
+        "id": "minecraft:stony_peaks",
+        "color": "#7b8f74"
+    },
+    {
+        "id": "minecraft:stony_shore",
+        "color": "#a2a284"
+    },
+    {
+        "id": "minecraft:sunflower_plains",
+        "color": "#b6dc89"
+    },
+    {
+        "id": "minecraft:swamp",
+        "color": "#08f9b3"
+    },
+    {
+        "id": "minecraft:taiga",
+        "color": "#0b6b5f"
+    },
+    {
+        "id": "minecraft:the_end",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:the_void",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:warm_ocean",
+        "color": "#0000ac"
+    },
+    {
+        "id": "minecraft:warped_forest",
+        "color": "#00ff00"
+    },
+    {
+        "id": "minecraft:windswept_forest",
+        "color": "#5b7253"
+    },
+    {
+        "id": "minecraft:windswept_gravelly_hills",
+        "color": "#898989"
+    },
+    {
+        "id": "minecraft:windswept_hills",
+        "color": "#5f5f5f"
+    },
+    {
+        "id": "minecraft:windswept_savanna",
+        "color": "#e8da88"
+    },
+    {
+        "id": "minecraft:wooded_badlands",
+        "color": "#af9764"
+    }
+]
