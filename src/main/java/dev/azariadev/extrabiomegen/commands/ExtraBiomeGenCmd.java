@@ -18,6 +18,9 @@ import net.minecraft.world.level.levelgen.RandomState;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
 
 public class ExtraBiomeGenCmd {
@@ -80,20 +83,6 @@ public class ExtraBiomeGenCmd {
         });
 
         return 1;
-
-        //var biome = biomeSrc.getNoiseBiome(
-        //    quartX, quartY, quartZ, level.getChunkSource().randomState().sampler()
-        //);
-//
-        //var biomeId = level.registryAccess()
-        //    .registryOrThrow(Registries.BIOME)
-        //    .getKey(biome.value());
-//
-        //src.sendSuccess(() -> Component.literal(
-        //    "Biome at your position (calculated): " + biomeId
-        //), false);
-//
-        //return 1;
     }
 
     private static void generateBiomeImage (
@@ -125,13 +114,7 @@ public class ExtraBiomeGenCmd {
                 var biome = biomeSrc.getNoiseBiome(xq, yq, zq, randomState.sampler());
                 var biomeId = registry.getKey(biome.value());
 
-                int color;
-                if (biomeId != null && biomeId.equals(Biomes.OCEAN.location())) {
-                    color = 0x0000ff;
-                }
-                else {
-                    color = BiomeColorRegistry.getColor(biomeId);
-                }
+                int color = BiomeColorRegistry.getColor(biomeId);
 
                 img.setRGB(dx, dz, color);
             }
@@ -139,9 +122,18 @@ public class ExtraBiomeGenCmd {
 
         long seed = level.getSeed();
 
-        var out = level.getServer().getServerDirectory().toPath().resolve(
-            "biome_map." + seed + "." + xCenter + ", " + zCenter + ".png"
+        var formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+        var timestamp = LocalDateTime.now().format(formatter);
+
+        var root = level.getServer().getServerDirectory().toPath();
+        var outDir = root.resolve("extrabiomegen");
+        Files.createDirectories(outDir);
+
+        var out = outDir.resolve(
+            "biome_map." + seed + "." + xCenter + "." + zCenter + "."
+                + scale + "." + timestamp + ".png"
         );
+
         ImageIO.write(img, "png", out.toFile());
     }
 }

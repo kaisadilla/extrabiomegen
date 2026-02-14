@@ -38,9 +38,11 @@ public class VoronoiBiomeSource extends BiomeSource {
     private static final long CONT_HIGHLAND = Climate.quantizeCoord(0.03f);
     private static final long CONT_INTERIOR = Climate.quantizeCoord(0.3f);
 
-    private static final long EROSION_RUGGED = Climate.quantizeCoord(-0.65f);
-    private static final long EROSION_NORMAL = Climate.quantizeCoord(-0.3f);
-    private static final long EROSION_SMOOTH = Climate.quantizeCoord(0.3f);
+    private static final long EROSION_RUGGED = Climate.quantizeCoord(-0.7799f);
+    private static final long EROSION_CRAGGY = Climate.quantizeCoord(-0.375f);
+    private static final long EROSION_NORMAL = Climate.quantizeCoord(-0.2225f);
+    private static final long EROSION_ROLLING = Climate.quantizeCoord(0.05f);
+    private static final long EROSION_SMOOTH = Climate.quantizeCoord(0.45f);
     private static final long EROSION_FLAT = Climate.quantizeCoord(0.55f);
 
     private static final long TEMP_COLD = Climate.quantizeCoord(-0.45f);
@@ -53,11 +55,17 @@ public class VoronoiBiomeSource extends BiomeSource {
     private static final long HUMIDITY_WET = Climate.quantizeCoord(0.1f);
     private static final long HUMIDITY_HUMID = Climate.quantizeCoord(0.3f);
 
-    private static final long WEIRD_NORMAL_PEAK = Climate.quantizeCoord(-0.85f);
-    private static final long WEIRD_NORMAL_RIVERSIDE = Climate.quantizeCoord(-0.45f);
-    private static final long WEIRD_VAR_RIVERSIDE = Climate.quantizeCoord(-0f);
-    private static final long WEIRD_VAR_PEAK = Climate.quantizeCoord(0.45f);
-    private static final long WEIRD_VAR_SLOPE = Climate.quantizeCoord(0.85f);
+    private static final long WEIRD_NORMAL_OUTER_SLOPE = Climate.quantizeCoord(-0.9333f);
+    private static final long WEIRD_NORMAL_OUTER_PEAK = Climate.quantizeCoord(-0.7666f);
+    private static final long WEIRD_NORMAL_INNER_SLOPE = Climate.quantizeCoord(-0.5666f);
+    private static final long WEIRD_NORMAL_INNER_VALLEY = Climate.quantizeCoord(-0.4f);
+    private static final long WEIRD_NORMAL_RIVER_BANK = Climate.quantizeCoord(-0.2666f);
+    private static final long WEIRD_VAR_RIVER_BANK = Climate.quantizeCoord(0f);
+    private static final long WEIRD_VAR_INNER_VALLEY = Climate.quantizeCoord(0.2666f);
+    private static final long WEIRD_VAR_INNER_SLOPE = Climate.quantizeCoord(0.4f);
+    private static final long WEIRD_VAR_OUTER_PEAK = Climate.quantizeCoord(0.5666f);
+    private static final long WEIRD_VAR_OUTER_SLOPE = Climate.quantizeCoord(0.7666f);
+    private static final long WEIRD_VAR_OUTER_VALLEY = Climate.quantizeCoord(0.9333f);
     // endregion Thresholds
 
     private static final long BEACH_CONT_MIN = Climate.quantizeCoord(-0.19f);
@@ -179,8 +187,8 @@ public class VoronoiBiomeSource extends BiomeSource {
         if (isRiver(w, c, e)) return getRiver(t, h, r);
         if (c < CONT_COAST) return getOcean(t, c, r);
 
-        return getLand(x, z, sampler);
-        //return getLand(c, e, t, h, w, r);
+        //return getLand(x, z, sampler);
+        return getLand(c, e, t, h, w, r);
     }
 
     private double getRegion (int x, int z) {
@@ -286,10 +294,12 @@ public class VoronoiBiomeSource extends BiomeSource {
 
     private int erosionLevel (long erosion) {
         if (erosion < EROSION_RUGGED) return 0;
-        if (erosion < EROSION_NORMAL) return 1;
-        if (erosion < EROSION_SMOOTH) return 2;
-        if (erosion < EROSION_FLAT) return 3;
-        return 4;
+        if (erosion < EROSION_CRAGGY) return 1;
+        if (erosion < EROSION_NORMAL) return 2;
+        if (erosion < EROSION_ROLLING) return 3;
+        if (erosion < EROSION_SMOOTH) return 4;
+        if (erosion < EROSION_FLAT) return 5;
+        return 6;
     }
 
     private int temperatureLevel (long temperature) {
@@ -309,12 +319,18 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     private int weirdnessLevel (long weirdness) {
-        if (weirdness < WEIRD_NORMAL_PEAK) return 0;
-        if (weirdness < WEIRD_NORMAL_RIVERSIDE) return 1;
-        if (weirdness < WEIRD_VAR_RIVERSIDE) return 2;
-        if (weirdness < WEIRD_VAR_PEAK) return 3;
-        if (weirdness < WEIRD_VAR_SLOPE) return 4;
-        return 5;
+        if (weirdness < WEIRD_NORMAL_OUTER_SLOPE) return 0;
+        if (weirdness < WEIRD_NORMAL_OUTER_PEAK) return 1;
+        if (weirdness < WEIRD_NORMAL_INNER_SLOPE) return 2;
+        if (weirdness < WEIRD_NORMAL_INNER_VALLEY) return 3;
+        if (weirdness < WEIRD_NORMAL_RIVER_BANK) return 4;
+        if (weirdness < WEIRD_VAR_RIVER_BANK) return 5;
+        if (weirdness < WEIRD_VAR_INNER_VALLEY) return 6;
+        if (weirdness < WEIRD_VAR_INNER_SLOPE) return 7;
+        if (weirdness < WEIRD_VAR_OUTER_PEAK) return 8;
+        if (weirdness < WEIRD_VAR_OUTER_SLOPE) return 9;
+        if (weirdness < WEIRD_VAR_OUTER_VALLEY) return 10;
+        return 11;
     }
     // endregion Parameter levels
 
