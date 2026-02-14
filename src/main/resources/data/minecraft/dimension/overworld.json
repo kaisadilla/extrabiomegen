@@ -35,6 +35,23 @@
                     "deep": ["minecraft:warm_ocean"]
                 }
             },
+            "exotic": {
+                "frozen": [
+                    "minecraft:mushroom_fields"
+                ],
+                "cold": [
+                    "minecraft:mushroom_fields"
+                ],
+                "normal": [
+                    "minecraft:mushroom_fields"
+                ],
+                "warm": [
+                    "minecraft:mushroom_fields"
+                ],
+                "hot": [
+                    "minecraft:mushroom_fields"
+                ]
+            },
             "land": {
                 "coast": {
                     "jagged": {

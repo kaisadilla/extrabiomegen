@@ -91,6 +91,10 @@ public class VoronoiBiomeSource extends BiomeSource {
                 )
             ).fieldOf("ocean").forGetter(bs -> bs._oceanDef),
             Codec.unboundedMap(
+                Temperature.CODEC,
+                Biome.CODEC.listOf()
+            ).fieldOf("exotic").forGetter(bs -> bs._exoticDef),
+            Codec.unboundedMap(
                 Continentalness.CODEC,
                 Codec.unboundedMap(
                     Erosion.CODEC,
@@ -110,12 +114,14 @@ public class VoronoiBiomeSource extends BiomeSource {
 
     private final Map<Temperature, Map<Humidity, List<Holder<Biome>>>> _riverDef;
     private final Map<Temperature, Map<OceanDepth, List<Holder<Biome>>>> _oceanDef;
+    private final Map<Temperature, List<Holder<Biome>>> _exoticDef;
     private final Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>> _landDef;
     // endregion Codec
 
     private final Set<Holder<Biome>> _possibleBiomes = new HashSet<>();
     private final Holder<Biome>[][][] _riverBiomes;
     private final Holder<Biome>[][][] _oceanBiomes;
+    private final Holder<Biome>[][] _exoticBiomes;
     private final Holder<Biome>[][][][][][] _landBiomes;
 
     //private final FastNoiseLite _regionNoise;
@@ -128,10 +134,12 @@ public class VoronoiBiomeSource extends BiomeSource {
     public VoronoiBiomeSource (
         Map<Temperature, Map<Humidity, List<Holder<Biome>>>> riverDef,
         Map<Temperature, Map<OceanDepth, List<Holder<Biome>>>> oceanDef,
+        Map<Temperature, List<Holder<Biome>>> exoticDef,
         Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef
     ) {
         _riverDef = riverDef;
         _oceanDef = oceanDef;
+        _exoticDef = exoticDef;
         _landDef = landDef;
 
         long seed = 6622L * 0x9E3779B97F4A7C15L;
@@ -152,6 +160,7 @@ public class VoronoiBiomeSource extends BiomeSource {
 
         _riverBiomes = buildRiverBiomeArray(riverDef);
         _oceanBiomes = buildOceanBiomeArray(oceanDef);
+        _exoticBiomes = buildExoticBiomeArray(exoticDef);
         _landBiomes = buildLandBiomeArray(landDef);
 
         _existingOrigins2 = new Long2ObjectOpenHashMap<>();
@@ -185,6 +194,7 @@ public class VoronoiBiomeSource extends BiomeSource {
         // TODO: d < 0.05 -> potential underground biomes.
 
         if (isRiver(w, c, e)) return getRiver(t, h, r);
+        if (c < CONT_DEEP) return getExotic(t, r);
         if (c < CONT_COAST) return getOcean(t, c, r);
 
         //return getLand(x, z, sampler);
@@ -220,8 +230,13 @@ public class VoronoiBiomeSource extends BiomeSource {
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
+    private Holder<Biome> getExotic (long temperature, double region) {
+        var arr = _exoticBiomes[temperatureLevel(temperature)];
+        return arr[getBiomeFromRegion(region, arr.length)];
+    }
+
     private Holder<Biome> getOcean (long temperature, long depth, double region) {
-        var arr= _oceanBiomes[temperatureLevel(temperature)][depthLevel(depth)];
+        var arr = _oceanBiomes[temperatureLevel(temperature)][depthLevel(depth)];
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
@@ -403,6 +418,21 @@ public class VoronoiBiomeSource extends BiomeSource {
                 _possibleBiomes.addAll(biomes);
             }
 
+        }
+
+        return arr;
+    }
+
+    private Holder<Biome>[][] buildExoticBiomeArray (Map<Temperature, List<Holder<Biome>>> exoticDef) {
+        var tempValues = Temperature.values();
+
+        Holder<Biome>[][] arr = new Holder[tempValues.length][];
+
+        for (int t = 0; t < tempValues.length; t++) {
+            List<Holder<Biome>> biomes = exoticDef.get(tempValues[t]);
+            arr[t] = biomes.toArray(Holder[]::new);
+
+            _possibleBiomes.addAll(biomes);
         }
 
         return arr;
