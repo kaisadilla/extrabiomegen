@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
-public class VoronoiBiomeSource extends BiomeSource {
+public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private static final int REGION_SCALE = 400;
     private static final int BIOME_SCALE = 50;
 
@@ -74,13 +74,8 @@ public class VoronoiBiomeSource extends BiomeSource {
     private static final long WEIRD_VAR_OUTER_VALLEY = Climate.quantizeCoord(0.9333f);
     // endregion Thresholds
 
-    private static final long BEACH_CONT_MIN = Climate.quantizeCoord(-0.19f);
-    private static final long BEACH_CONT_MAX = Climate.quantizeCoord(-0.11f);
-
-    private static final long MIN_EROSION = Climate.quantizeCoord(-0.5f);
-
     // region Codec
-    public static final Codec<VoronoiBiomeSource> CODEC =
+    public static final Codec<MultiNoiseDiscreteBiomeSource> CODEC =
         RecordCodecBuilder.create(instance -> instance.group(
             Codec.unboundedMap(
                 Temperature.CODEC,
@@ -137,7 +132,7 @@ public class VoronoiBiomeSource extends BiomeSource {
                 )
             ).fieldOf("cave").forGetter(bs -> bs._caveDef)
 
-        ).apply(instance, VoronoiBiomeSource::new));
+        ).apply(instance, MultiNoiseDiscreteBiomeSource::new));
 
     private final Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> _riverDef;
     private final Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> _oceanDef;
@@ -160,7 +155,7 @@ public class VoronoiBiomeSource extends BiomeSource {
     private final Long2ObjectMap<Holder<Biome>> _existingOrigins2;
     private final Long2ObjectMap<Holder<Biome>> _existingOrigins;
 
-    public VoronoiBiomeSource (
+    public MultiNoiseDiscreteBiomeSource (
         Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef,
         Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> oceanDef,
         Map<Temperature, List<Holder<Biome>>> exoticDef,

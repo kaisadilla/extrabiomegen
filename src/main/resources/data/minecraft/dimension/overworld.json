@@ -4,7 +4,7 @@
         "type": "minecraft:noise",
         "settings": "minecraft:overworld",
         "biome_source": {
-            "type": "extrabiomegen:voronoi",
+            "type": "extrabiomegen:multinoise_discrete",
             "river": {
                 "frozen": {
                     "arid": ["minecraft:frozen_river"]
