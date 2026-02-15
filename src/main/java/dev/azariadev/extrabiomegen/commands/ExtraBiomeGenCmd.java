@@ -2,6 +2,8 @@ package dev.azariadev.extrabiomegen.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import dev.azariadev.extrabiomegen.registries.BiomeColorRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -28,36 +30,34 @@ public class ExtraBiomeGenCmd {
         dispatcher.register(
             Commands.literal("extrabiomegen")
                 .requires(src -> src.hasPermission(2))
-                .then(
-                    Commands.literal("biomemap")
-                        .then(
-                            Commands.argument("x", IntegerArgumentType.integer())
-                                .then(
-                                    Commands.argument("z", IntegerArgumentType.integer())
-                                        .executes(ctx -> {
-                                            int x = IntegerArgumentType.getInteger(ctx, "x");
-                                            int z = IntegerArgumentType.getInteger(ctx, "z");
+                    .then(Commands.literal("biomemap")
+                    .then(Commands.argument("x", IntegerArgumentType.integer())
+                    .then(Commands.argument("y", IntegerArgumentType.integer())
+                    .then(Commands.argument("z", IntegerArgumentType.integer())
+                    .then(Commands.argument("scale", IntegerArgumentType.integer(1))
+                        .executes(ctx -> {
+                            return executeBiomeMap(ctx, "map");
+                        })
+                        .then(Commands.argument("name", StringArgumentType.string())
+                            .executes(ctx -> {
+                                String name = StringArgumentType.getString(ctx, "name");
 
-                                            return executeBiomeMap(ctx.getSource(), x, z, 1);
-                                        })
-                                        .then(Commands.argument("scale", IntegerArgumentType.integer(1))
-                                            .executes(ctx -> {
-                                                int x = IntegerArgumentType.getInteger(ctx, "x");
-                                                int z = IntegerArgumentType.getInteger(ctx, "z");
-                                                int scale = IntegerArgumentType.getInteger(ctx, "scale");
-
-                                                return executeBiomeMap(ctx.getSource(), x, z, scale);
-                                            })
-                                        )
-                                )
+                                return executeBiomeMap(ctx, name);
+                            })
                         )
-                )
+                    )))))
         );
     }
 
     private static int executeBiomeMap (
-        CommandSourceStack src, int x, int z, int scale
+        CommandContext<CommandSourceStack> ctx, String name
     ) {
+        int x = IntegerArgumentType.getInteger(ctx, "x");
+        int y = IntegerArgumentType.getInteger(ctx, "y");
+        int z = IntegerArgumentType.getInteger(ctx, "z");
+        int scale = IntegerArgumentType.getInteger(ctx, "scale");
+
+        var src = ctx.getSource();
         var level = src.getLevel();
         var gen = level.getChunkSource().getGenerator();
         var randomState = level.getChunkSource().randomState();
@@ -68,7 +68,7 @@ public class ExtraBiomeGenCmd {
             try {
                 long start = System.nanoTime();
 
-                generateBiomeImage(level, gen, randomState, x, z, scale);
+                generateBiomeImage(level, gen, randomState, x, y, z, scale, name);
 
                 long end = System.nanoTime();
                 long ms = (end - start) / 1_000_000;
@@ -90,8 +90,10 @@ public class ExtraBiomeGenCmd {
         ChunkGenerator generator,
         RandomState randomState,
         int xCenter,
+        int y,
         int zCenter,
-        int scale
+        int scale,
+        String name
     ) throws Exception {
         var biomeSrc = generator.getBiomeSource();
 
@@ -105,10 +107,9 @@ public class ExtraBiomeGenCmd {
             for (int dx = 0; dx < size; dx++) {
                 int xWorld = xCenter + ((dx - half) * scale);
                 int zWorld = zCenter + ((dz - half) * scale);
-                int yWorld = 256;
 
                 int xq = QuartPos.fromBlock(xWorld);
-                int yq = QuartPos.fromBlock(yWorld);
+                int yq = QuartPos.fromBlock(y);
                 int zq = QuartPos.fromBlock(zWorld);
 
                 var biome = biomeSrc.getNoiseBiome(xq, yq, zq, randomState.sampler());
@@ -130,7 +131,7 @@ public class ExtraBiomeGenCmd {
         Files.createDirectories(outDir);
 
         var out = outDir.resolve(
-            "biome_map." + seed + "." + xCenter + "." + zCenter + "."
+            name + "." + seed + "." + xCenter + "." + y + "." + zCenter + "."
                 + scale + "." + timestamp + ".png"
         );
 

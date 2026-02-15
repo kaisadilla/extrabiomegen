@@ -24,8 +24,8 @@ public enum Erosion {
                 default: throw new IllegalArgumentException("Unknown erosion: " + str);
             }
         },
-        temp -> {
-            switch (temp) {
+        e -> {
+            switch (e) {
                 case JAGGED: return "jagged";
                 case RUGGED: return "rugged";
                 case CRAGGY: return "craggy";

@@ -2,15 +2,14 @@ package dev.azariadev.extrabiomegen.biomesources.parameters;
 
 import com.mojang.serialization.Codec;
 
-public enum Humidity {
+public enum LandHumidity {
     ARID,
     DRY,
     NORMAL,
     WET,
-    HUMID,
-    LUSH;
+    HUMID;
 
-    public static final Codec<Humidity> CODEC = Codec.STRING.xmap(
+    public static final Codec<LandHumidity> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {
                 case "arid": return ARID;
@@ -18,7 +17,6 @@ public enum Humidity {
                 case "normal": return NORMAL;
                 case "wet": return WET;
                 case "humid": return HUMID;
-                case "lush": return LUSH;
                 default: throw new IllegalArgumentException("Unknown humidity: " + str);
             }
         },
@@ -28,7 +26,6 @@ public enum Humidity {
                 case DRY: return "dry";
                 case WET: return "wet";
                 case HUMID: return "humid";
-                case LUSH: return "lush";
                 default: return "normal";
             }
         }

@@ -22,8 +22,8 @@ public enum Temperature {
                 default: throw new IllegalArgumentException("Unknown temperature: " + str);
             }
         },
-        temp -> {
-            switch (temp) {
+        t -> {
+            switch (t) {
                 case FROZEN: return "frozen";
                 case COLD: return "cold";
                 case WARM: return "warm";

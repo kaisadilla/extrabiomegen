@@ -3,9 +3,7 @@ package dev.azariadev.extrabiomegen.biomesources;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.azariadev.extrabiomegen.biomesources.parameters.*;
-import dev.azariadev.extrabiomegen.noise.FastNoiseLite;
 import dev.azariadev.extrabiomegen.noise.VoronoiMap;
-import dev.azariadev.extrabiomegen.noise.VoronoiSampler;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -13,6 +11,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.IntFunction;
@@ -31,12 +30,18 @@ public class VoronoiBiomeSource extends BiomeSource {
     private static final long RIVER_EROSION_LOW = Climate.quantizeCoord(-0.375f);
     private static final long RIVER_EROSION_HIGH = Climate.quantizeCoord(0.55f);
 
-    private static final long CONT_DEEP = Climate.quantizeCoord(-1.05f);
-    private static final long CONT_SHALLOW = Climate.quantizeCoord(-0.455f);
+    private static final long DEPTH_SHALLOW = Climate.quantizeCoord(0.1f);
+    private static final long DEPTH_NORMAL = Climate.quantizeCoord(0.55f);
+    private static final long DEPTH_DEEP = Climate.quantizeCoord(1f);
+    private static final long DEPTH_VERY_DEEP = Climate.quantizeCoord(1.15f);
+
+    private static final long CONT_DEEP_OCEAN = Climate.quantizeCoord(-1.05f);
+    private static final long CONT_SHALLOW_OCEAN = Climate.quantizeCoord(-0.455f);
     private static final long CONT_COAST = Climate.quantizeCoord(-0.19f);
     private static final long CONT_LOWLAND = Climate.quantizeCoord(-0.11f);
     private static final long CONT_HIGHLAND = Climate.quantizeCoord(0.03f);
     private static final long CONT_INTERIOR = Climate.quantizeCoord(0.3f);
+    private static final long CONT_DEEP_INTERIOR = Climate.quantizeCoord(0.7f);
 
     private static final long EROSION_RUGGED = Climate.quantizeCoord(-0.7799f);
     private static final long EROSION_CRAGGY = Climate.quantizeCoord(-0.375f);
@@ -54,6 +59,7 @@ public class VoronoiBiomeSource extends BiomeSource {
     private static final long HUMIDITY_NORMAL = Climate.quantizeCoord(-0.1f);
     private static final long HUMIDITY_WET = Climate.quantizeCoord(0.1f);
     private static final long HUMIDITY_HUMID = Climate.quantizeCoord(0.3f);
+    private static final long HUMIDITY_LUSH = Climate.quantizeCoord(0.5f);
 
     private static final long WEIRD_NORMAL_OUTER_SLOPE = Climate.quantizeCoord(-0.9333f);
     private static final long WEIRD_NORMAL_OUTER_PEAK = Climate.quantizeCoord(-0.7666f);
@@ -79,29 +85,32 @@ public class VoronoiBiomeSource extends BiomeSource {
             Codec.unboundedMap(
                 Temperature.CODEC,
                 Codec.unboundedMap(
-                    Humidity.CODEC,
+                    LandHumidity.CODEC,
                     Biome.CODEC.listOf()
                 )
             ).fieldOf("river").forGetter(bs -> bs._riverDef),
+
             Codec.unboundedMap(
                 Temperature.CODEC,
                 Codec.unboundedMap(
-                    OceanDepth.CODEC,
+                    OceanContinentalness.CODEC,
                     Biome.CODEC.listOf()
                 )
             ).fieldOf("ocean").forGetter(bs -> bs._oceanDef),
+
             Codec.unboundedMap(
                 Temperature.CODEC,
                 Biome.CODEC.listOf()
             ).fieldOf("exotic").forGetter(bs -> bs._exoticDef),
+
             Codec.unboundedMap(
-                Continentalness.CODEC,
+                LandContinentalness.CODEC,
                 Codec.unboundedMap(
                     Erosion.CODEC,
                     Codec.unboundedMap(
                         Temperature.CODEC,
                         Codec.unboundedMap(
-                            Humidity.CODEC,
+                            LandHumidity.CODEC,
                             Codec.unboundedMap(
                                 Weirdness.CODEC,
                                 Biome.CODEC.listOf()
@@ -109,13 +118,32 @@ public class VoronoiBiomeSource extends BiomeSource {
                         )
                     )
                 )
-            ).fieldOf("land").forGetter(bs -> bs._landDef)
+            ).fieldOf("land").forGetter(bs -> bs._landDef),
+
+            Codec.unboundedMap(
+                CaveDepth.CODEC,
+                Codec.unboundedMap(
+                    Continentalness.CODEC,
+                    Codec.unboundedMap(
+                        Erosion.CODEC,
+                        Codec.unboundedMap(
+                            Temperature.CODEC,
+                            Codec.unboundedMap(
+                                Humidity.CODEC,
+                                Biome.CODEC.listOf()
+                            )
+                        )
+                    )
+                )
+            ).fieldOf("cave").forGetter(bs -> bs._caveDef)
+
         ).apply(instance, VoronoiBiomeSource::new));
 
-    private final Map<Temperature, Map<Humidity, List<Holder<Biome>>>> _riverDef;
-    private final Map<Temperature, Map<OceanDepth, List<Holder<Biome>>>> _oceanDef;
+    private final Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> _riverDef;
+    private final Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> _oceanDef;
     private final Map<Temperature, List<Holder<Biome>>> _exoticDef;
-    private final Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>> _landDef;
+    private final Map<LandContinentalness, Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>> _landDef;
+    private final Map<CaveDepth, Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, @Nullable List<Holder<Biome>>>>>>> _caveDef;
     // endregion Codec
 
     private final Set<Holder<Biome>> _possibleBiomes = new HashSet<>();
@@ -123,6 +151,7 @@ public class VoronoiBiomeSource extends BiomeSource {
     private final Holder<Biome>[][][] _oceanBiomes;
     private final Holder<Biome>[][] _exoticBiomes;
     private final Holder<Biome>[][][][][][] _landBiomes;
+    private final Holder<Biome>[][][][]@Nullable[][] _caveBiomes;
 
     //private final FastNoiseLite _regionNoise;
     private final VoronoiMap _regionNoise;
@@ -132,26 +161,20 @@ public class VoronoiBiomeSource extends BiomeSource {
     private final Long2ObjectMap<Holder<Biome>> _existingOrigins;
 
     public VoronoiBiomeSource (
-        Map<Temperature, Map<Humidity, List<Holder<Biome>>>> riverDef,
-        Map<Temperature, Map<OceanDepth, List<Holder<Biome>>>> oceanDef,
+        Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef,
+        Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> oceanDef,
         Map<Temperature, List<Holder<Biome>>> exoticDef,
-        Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef
+        Map<LandContinentalness, Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef,
+        Map<CaveDepth, Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, @Nullable List<Holder<Biome>>>>>>> caveDef
     ) {
         _riverDef = riverDef;
         _oceanDef = oceanDef;
         _exoticDef = exoticDef;
         _landDef = landDef;
+        _caveDef = caveDef;
 
         long seed = 6622L * 0x9E3779B97F4A7C15L;
         seed ^= seed >>> 32;
-
-        //_regionNoise = new FastNoiseLite();
-        //_regionNoise.SetSeed((int)seed);
-        //_regionNoise.SetNoiseType(FastNoiseLite.NoiseType.Cellular);
-        //_regionNoise.SetCellularReturnType(FastNoiseLite.CellularReturnType.CellValue);
-        //_regionNoise.SetFrequency(1f / REGION_SCALE);
-        //_regionNoise.SetDomainWarpType(FastNoiseLite.DomainWarpType.OpenSimplex2);
-        //_regionNoise.SetDomainWarpAmp(60f);
 
         _regionNoise = new VoronoiMap((int)seed, REGION_SCALE);
         _regionNoise.setWarpScale(0.02f);
@@ -162,6 +185,7 @@ public class VoronoiBiomeSource extends BiomeSource {
         _oceanBiomes = buildOceanBiomeArray(oceanDef);
         _exoticBiomes = buildExoticBiomeArray(exoticDef);
         _landBiomes = buildLandBiomeArray(landDef);
+        _caveBiomes = buildCaveBiomeArray(caveDef);
 
         _existingOrigins2 = new Long2ObjectOpenHashMap<>();
         _existingOrigins = Long2ObjectMaps.synchronize(_existingOrigins2);
@@ -191,14 +215,18 @@ public class VoronoiBiomeSource extends BiomeSource {
         var w = target.weirdness();
         var r = getRegion(x, z);
 
-        // TODO: d < 0.05 -> potential underground biomes.
+        // Cave biomes.
+        if (d > DEPTH_SHALLOW) {
+            var biome = getCaveOrNull(d, c, e, t, h, r);
+            if (biome != null) return biome;
+        }
 
         if (isRiver(w, c, e)) return getRiver(t, h, r);
-        if (c < CONT_DEEP) return getExotic(t, r);
+        if (c < CONT_DEEP_OCEAN) return getExotic(t, r);
         if (c < CONT_COAST) return getOcean(t, c, r);
 
-        //return getLand(x, z, sampler);
-        return getLand(c, e, t, h, w, r);
+        return getLand(x, z, sampler);
+        //return getLand(c, e, t, h, w, r);
     }
 
     private double getRegion (int x, int z) {
@@ -226,7 +254,7 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     private Holder<Biome> getRiver (long temperature, long humidity, double region) {
-        var arr = _riverBiomes[temperatureLevel(temperature)][humidityLevel(humidity)];
+        var arr = _riverBiomes[temperatureLevel(temperature)][landHumidityLevel(humidity)];
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
@@ -236,7 +264,7 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     private Holder<Biome> getOcean (long temperature, long depth, double region) {
-        var arr = _oceanBiomes[temperatureLevel(temperature)][depthLevel(depth)];
+        var arr = _oceanBiomes[temperatureLevel(temperature)][oceanContinentalnessLevel(depth)];
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
@@ -281,12 +309,31 @@ public class VoronoiBiomeSource extends BiomeSource {
         double region
     ) {
         var arr = _landBiomes
+            [landContinentalnessLevel(continentalness)]
+            [erosionLevel(erosion)]
+            [temperatureLevel(temperature)]
+            [landHumidityLevel(humidity)]
+            [weirdnessLevel(weirdness)];
+
+        return arr[getBiomeFromRegion(region, arr.length)];
+    }
+
+    private @Nullable Holder<Biome> getCaveOrNull (
+        long depth,
+        long continentalness,
+        long erosion,
+        long temperature,
+        long humidity,
+        double region
+    ) {
+        var arr = _caveBiomes
+            [depthLevel(depth)]
             [continentalnessLevel(continentalness)]
             [erosionLevel(erosion)]
             [temperatureLevel(temperature)]
-            [humidityLevel(humidity)]
-            [weirdnessLevel(weirdness)];
+            [humidityLevel(humidity)];
 
+        if (arr == null) return null;
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
@@ -295,12 +342,30 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     // region Parameter levels
-    private int depthLevel (long continentalness) {
-        if (continentalness < CONT_SHALLOW) return 1;
-        return 0;
+    private int depthLevel (long depth) {
+        if (depth < DEPTH_NORMAL) return 0;
+        if (depth < DEPTH_DEEP) return 1;
+        if (depth < DEPTH_VERY_DEEP) return 2;
+        return 3;
     }
 
     private int continentalnessLevel (long continentalness) {
+        if (continentalness < CONT_DEEP_OCEAN) return 0;
+        if (continentalness < CONT_SHALLOW_OCEAN) return 1;
+        if (continentalness < CONT_COAST) return 2;
+        if (continentalness < CONT_LOWLAND) return 3;
+        if (continentalness < CONT_HIGHLAND) return 4;
+        if (continentalness < CONT_INTERIOR) return 5;
+        if (continentalness < CONT_DEEP_INTERIOR) return 6;
+        return 7;
+    }
+
+    private int oceanContinentalnessLevel (long continentalness) {
+        if (continentalness < CONT_SHALLOW_OCEAN) return 1;
+        return 0;
+    }
+
+    private int landContinentalnessLevel (long continentalness) {
         if (continentalness < CONT_LOWLAND) return 0;
         if (continentalness < CONT_HIGHLAND) return 1;
         if (continentalness < CONT_INTERIOR) return 2;
@@ -326,6 +391,15 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     private int humidityLevel (long humidity) {
+        if (humidity < HUMIDITY_DRY) return 0;
+        if (humidity < HUMIDITY_NORMAL) return 1;
+        if (humidity < HUMIDITY_WET) return 2;
+        if (humidity < HUMIDITY_HUMID) return 3;
+        if (humidity < HUMIDITY_LUSH) return 4;
+        return 5;
+    }
+
+    private int landHumidityLevel (long humidity) {
         if (humidity < HUMIDITY_DRY) return 0;
         if (humidity < HUMIDITY_NORMAL) return 1;
         if (humidity < HUMIDITY_WET) return 2;
@@ -369,13 +443,13 @@ public class VoronoiBiomeSource extends BiomeSource {
         return arr;
     }
 
-    private Holder<Biome>[][][] buildRiverBiomeArray (Map<Temperature, Map<Humidity, List<Holder<Biome>>>> riverDef) {
+    private Holder<Biome>[][][] buildRiverBiomeArray (Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef) {
         var tempValues = Temperature.values();
-        var humValues = Humidity.values();
+        var humValues = LandHumidity.values();
 
         Holder<Biome>[][][] arr = new Holder[tempValues.length][humValues.length][];
 
-        Map<Humidity, List<Holder<Biome>>>[] temperatures
+        Map<LandHumidity, List<Holder<Biome>>>[] temperatures
             = unwrap(riverDef, tempValues, Map[]::new);
 
         for (int t = 0; t < tempValues.length; t++) {
@@ -396,13 +470,13 @@ public class VoronoiBiomeSource extends BiomeSource {
         return arr;
     }
 
-    private Holder<Biome>[][][] buildOceanBiomeArray (Map<Temperature, Map<OceanDepth, List<Holder<Biome>>>> riverDef) {
+    private Holder<Biome>[][][] buildOceanBiomeArray (Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> riverDef) {
         var tempValues = Temperature.values();
-        var depthValues = OceanDepth.values();
+        var depthValues = OceanContinentalness.values();
 
         Holder<Biome>[][][] arr = new Holder[tempValues.length][depthValues.length][];
 
-        Map<OceanDepth, List<Holder<Biome>>>[] temperatures
+        Map<OceanContinentalness, List<Holder<Biome>>>[] temperatures
             = unwrap(riverDef, tempValues, Map[]::new);
 
         for (int t = 0; t < tempValues.length; t++) {
@@ -439,12 +513,12 @@ public class VoronoiBiomeSource extends BiomeSource {
     }
 
     private Holder<Biome>[][][][][][] buildLandBiomeArray (
-        Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef
+        Map<LandContinentalness, Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef
     ) {
-        var contValues = Continentalness.values();
+        var contValues = LandContinentalness.values();
         var erosionValues = Erosion.values();
         var tempValues = Temperature.values();
-        var humValues = Humidity.values();
+        var humValues = LandHumidity.values();
         var weirdValues = Weirdness.values();
 
         Holder<Biome>[][][][][][] arr = new Holder
@@ -455,15 +529,15 @@ public class VoronoiBiomeSource extends BiomeSource {
             [weirdValues.length]
             [];
 
-        Map<Erosion, Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>>[] continentals
+        Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>[] continentals
             = unwrap(landDef, contValues, Map[]::new);
 
         for (int c = 0; c < contValues.length; c++) {
-            Map<Temperature, Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>>[] erosions
+            Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>[] erosions
                 = unwrap(continentals[c], erosionValues, Map[]::new);
 
             for (int e = 0; e < erosionValues.length; e++) {
-                Map<Humidity, Map<Weirdness, List<Holder<Biome>>>>[] temps
+                Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>[] temps
                     = unwrap(erosions[e], tempValues, Map[]::new);
 
                 for (int t = 0; t < tempValues.length; t++) {
@@ -478,6 +552,60 @@ public class VoronoiBiomeSource extends BiomeSource {
                             arr[c][e][t][h][w] = weirdnesses[w].toArray(Holder[]::new);
 
                             _possibleBiomes.addAll(weirdnesses[w]);
+                        }
+                    }
+                }
+            }
+        }
+
+        return arr;
+    }
+
+    private Holder<Biome>[][][][]@Nullable[][] buildCaveBiomeArray (
+        Map<CaveDepth, Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, @Nullable List<Holder<Biome>>>>>>> caveDef
+    ) {
+        var depthValues = CaveDepth.values();
+        var contValues = Continentalness.values();
+        var erosionValues = Erosion.values();
+        var tempValues = Temperature.values();
+        var humValues = Humidity.values();
+
+        Holder<Biome>[][][][]@Nullable[][] arr = new Holder
+            [depthValues.length]
+            [contValues.length]
+            [erosionValues.length]
+            [tempValues.length]
+            [humValues.length]
+            [];
+
+        Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, List<Holder<Biome>>>>>>[] depths
+            = unwrap(caveDef, depthValues, Map[]::new);
+
+        for (int d = 0; d < depthValues.length; d++) {
+            Map<Erosion, Map<Temperature, Map<Humidity, List<Holder<Biome>>>>>[] conts
+                = unwrap(depths[d], contValues, Map[]::new);
+
+            for (int c = 0; c < contValues.length; c++) {
+                Map<Temperature, Map<Humidity, List<Holder<Biome>>>>[] erosions
+                    = unwrap(conts[c], erosionValues, Map[]::new);
+
+                for (int e = 0; e < erosionValues.length; e++) {
+                    Map<Humidity, List<Holder<Biome>>>[] temperatures
+                        = unwrap(erosions[e], tempValues, Map[]::new);
+
+                    for (int t = 0; t < tempValues.length; t++) {
+                        List<Holder<Biome>>[] humidities
+                            = unwrap(temperatures[t], humValues, List[]::new);
+
+                        for (int h = 0; h < humValues.length; h++) {
+                            if (humidities[h].size() == 0) {
+                                arr[d][c][e][t][h] = null;
+                            }
+                            else {
+                                arr[d][c][e][t][h] = humidities[h].toArray(Holder[]::new);
+                            }
+
+                            _possibleBiomes.addAll(humidities[h]);
                         }
                     }
                 }

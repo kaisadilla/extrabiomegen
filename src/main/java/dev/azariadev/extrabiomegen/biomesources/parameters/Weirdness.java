@@ -34,8 +34,8 @@ public enum Weirdness {
                 default: throw new IllegalArgumentException("Unknown weirdness: " + str);
             }
         },
-        weird -> {
-            switch (weird) {
+        w -> {
+            switch (w) {
                 case NORMAL_OUTER_VALLEY:  return "normal_outer_valley";
                 case NORMAL_OUTER_SLOPE:   return "normal_outer_slope";
                 case NORMAL_OUTER_PEAK:    return "normal_outer_peak";
@@ -48,7 +48,7 @@ public enum Weirdness {
                 case VARIANT_OUTER_PEAK:   return "variant_outer_peak";
                 case VARIANT_OUTER_SLOPE:  return "variant_outer_slope";
                 case VARIANT_OUTER_VALLEY: return "variant_outer_valley";
-                default: throw new IllegalArgumentException("Unknown weirdness enum: " + weird);
+                default: throw new IllegalArgumentException("Unknown weirdness enum: " + w);
             }
         }
     );
