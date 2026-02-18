@@ -18,9 +18,6 @@ import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
-    private static final int REGION_SCALE = 400;
-    private static final int BIOME_SCALE = 50;
-
     // region Thresholds
     private static final long RIVER_WEIRDNESS_MIN = Climate.quantizeCoord(-0.05f);
     private static final long RIVER_WEIRDNESS_MAX = Climate.quantizeCoord(0.05f);
@@ -77,6 +74,14 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     // region Codec
     public static final Codec<MultiNoiseDiscreteBiomeSource> CODEC =
         RecordCodecBuilder.create(instance -> instance.group(
+            Codec.INT.optionalFieldOf(
+                "region_size", 400
+            ).forGetter(bs -> bs._regionSize),
+
+            Codec.INT.optionalFieldOf(
+                "biome_size", 50
+            ).forGetter(bs -> bs._biomeSize),
+
             Codec.unboundedMap(
                 Temperature.CODEC,
                 Codec.unboundedMap(
@@ -97,6 +102,10 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
                 Temperature.CODEC,
                 Biome.CODEC.listOf()
             ).fieldOf("exotic").forGetter(bs -> bs._exoticDef),
+
+            BiomePlacementMode.CODEC.optionalFieldOf(
+                "land_placement_mode", BiomePlacementMode.TERRAIN
+            ).forGetter(bs -> bs._landPlacementMode),
 
             Codec.unboundedMap(
                 LandContinentalness.CODEC,
@@ -141,6 +150,10 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private final Map<CaveDepth, Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, @Nullable List<Holder<Biome>>>>>>> _caveDef;
     // endregion Codec
 
+    private int _regionSize;
+    private int _biomeSize;
+    private BiomePlacementMode _landPlacementMode;
+
     private final Set<Holder<Biome>> _possibleBiomes = new HashSet<>();
     private final Holder<Biome>[][][] _riverBiomes;
     private final Holder<Biome>[][][] _oceanBiomes;
@@ -148,33 +161,37 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private final Holder<Biome>[][][][][][] _landBiomes;
     private final Holder<Biome>[][][][]@Nullable[][] _caveBiomes;
 
-    //private final FastNoiseLite _regionNoise;
     private final VoronoiMap _regionNoise;
     private final VoronoiMap _biomeMap;
 
-    private final Long2ObjectMap<Holder<Biome>> _existingOrigins2;
     private final Long2ObjectMap<Holder<Biome>> _existingOrigins;
 
     public MultiNoiseDiscreteBiomeSource (
+        int regionSize,
+        int biomeSize,
         Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef,
         Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> oceanDef,
         Map<Temperature, List<Holder<Biome>>> exoticDef,
+        BiomePlacementMode landPlacementMode,
         Map<LandContinentalness, Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>> landDef,
         Map<CaveDepth, Map<Continentalness, Map<Erosion, Map<Temperature, Map<Humidity, @Nullable List<Holder<Biome>>>>>>> caveDef
     ) {
+        _regionSize = regionSize;
+        _biomeSize = biomeSize;
         _riverDef = riverDef;
         _oceanDef = oceanDef;
         _exoticDef = exoticDef;
+        _landPlacementMode = landPlacementMode;
         _landDef = landDef;
         _caveDef = caveDef;
 
         long seed = 6622L * 0x9E3779B97F4A7C15L;
         seed ^= seed >>> 32;
 
-        _regionNoise = new VoronoiMap((int)seed, REGION_SCALE);
+        _regionNoise = new VoronoiMap((int)seed, regionSize);
         _regionNoise.setWarpScale(0.02f);
         _regionNoise.setWarpStrength(50f);
-        _biomeMap = new VoronoiMap((int)seed, BIOME_SCALE);
+        _biomeMap = new VoronoiMap((int)seed, biomeSize);
 
         _riverBiomes = buildRiverBiomeArray(riverDef);
         _oceanBiomes = buildOceanBiomeArray(oceanDef);
@@ -182,8 +199,8 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         _landBiomes = buildLandBiomeArray(landDef);
         _caveBiomes = buildCaveBiomeArray(caveDef);
 
-        _existingOrigins2 = new Long2ObjectOpenHashMap<>();
-        _existingOrigins = Long2ObjectMaps.synchronize(_existingOrigins2);
+        Long2ObjectMap<Holder<Biome>> origins = new Long2ObjectOpenHashMap<>();
+        _existingOrigins = Long2ObjectMaps.synchronize(origins);
     }
 
     @Override
@@ -220,8 +237,13 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         if (c < CONT_DEEP_OCEAN) return getExotic(t, r);
         if (c < CONT_COAST) return getOcean(t, c, r);
 
-        return getLand(x, z, sampler);
-        //return getLand(c, e, t, h, w, r);
+        switch (_landPlacementMode) {
+            case TERRAIN: return getLand(c, e, t, h, w, r);
+            case VORONOI: return getLandVoronoi(x, z, sampler);
+            case MIXED: return getLandVoronoi(x, z, sampler);
+        }
+
+        throw new IllegalStateException("Unhandled land placement mode.");
     }
 
     private double getRegion (int x, int z) {
@@ -263,17 +285,14 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
-    private Holder<Biome> getLand (int x, int z, Climate.Sampler sampler) {
+    private Holder<Biome> getLandVoronoi (int x, int z, Climate.Sampler sampler) {
         int[] center = new int[2];
         _biomeMap.getCellOrigin(x, z, center);
 
-        int xi = (int)center[0];
-        int zi = (int)center[1];
+        int xi = center[0];
+        int zi = center[1];
 
-        //Random rng = new Random(xi + (zi * 100000));
-        //return _possibleBiomes.stream().skip(rng.nextInt(_possibleBiomes.size())).findFirst().orElseThrow();
-
-        long lcenter = ((long) xi << 32) | (zi & 0xffffffffL);
+        long lcenter = ((long)xi << 32) | (zi & 0xffffffffL);
 
         var biome = _existingOrigins.get(lcenter);
         if (biome != null) {

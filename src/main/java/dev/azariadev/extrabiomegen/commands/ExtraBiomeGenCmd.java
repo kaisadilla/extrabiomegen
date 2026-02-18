@@ -28,24 +28,34 @@ import java.util.concurrent.CompletableFuture;
 public class ExtraBiomeGenCmd {
     public static void register (CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
+            // /extrabiomegen
             Commands.literal("extrabiomegen")
                 .requires(src -> src.hasPermission(2))
-                    .then(Commands.literal("biomemap")
-                    .then(Commands.argument("x", IntegerArgumentType.integer())
-                    .then(Commands.argument("y", IntegerArgumentType.integer())
-                    .then(Commands.argument("z", IntegerArgumentType.integer())
-                    .then(Commands.argument("scale", IntegerArgumentType.integer(1))
-                        .executes(ctx -> {
-                            return executeBiomeMap(ctx, "map");
-                        })
-                        .then(Commands.argument("name", StringArgumentType.string())
-                            .executes(ctx -> {
-                                String name = StringArgumentType.getString(ctx, "name");
 
-                                return executeBiomeMap(ctx, name);
-                            })
-                        )
-                    )))))
+                // biomemap <x> <y> <z> <scale> [<name>]
+                .then(Commands.literal("biomemap")
+                .then(Commands.argument("x", IntegerArgumentType.integer())
+                .then(Commands.argument("y", IntegerArgumentType.integer())
+                .then(Commands.argument("z", IntegerArgumentType.integer())
+                .then(Commands.argument("scale", IntegerArgumentType.integer(1))
+                    .executes(ctx -> {
+                        return executeBiomeMap(ctx, "unnamed");
+                    })
+                    .then(Commands.argument("name", StringArgumentType.string())
+                        .executes(ctx -> {
+                            String name = StringArgumentType.getString(ctx, "name");
+
+                            return executeBiomeMap(ctx, name);
+                        })
+                    )
+                )))))
+
+                // dump possible_biomes
+                .then(Commands.literal("dump")
+                    .then(Commands.literal("possible_biomes")
+                        .executes(ExtraBiomeGenCmd::executeDumpBiomes)
+                    )
+                )
         );
     }
 
@@ -81,6 +91,20 @@ public class ExtraBiomeGenCmd {
                 ex.printStackTrace();
             }
         });
+
+        return 1;
+    }
+
+    private static int executeDumpBiomes (CommandContext<CommandSourceStack> ctx) {
+        var src = ctx.getSource();
+        var level = src.getLevel();
+        var gen = level.getChunkSource().getGenerator();
+        var registry = level.registryAccess().registryOrThrow(Registries.BIOME);
+
+        for (var biome : gen.getBiomeSource().possibleBiomes()) {
+            var key = registry.getKey(biome.value());
+            src.sendSuccess(() -> Component.literal(" - " + key.toString()), false);
+        }
 
         return 1;
     }

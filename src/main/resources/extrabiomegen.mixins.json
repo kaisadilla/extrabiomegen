@@ -4,8 +4,9 @@
     "package": "dev.azariadev.extrabiomegen.mixin",
     "refmap": "extrabiomegen.mixins.refmap.json",
     "compatibilityLevel": "JAVA_17",
+    "plugin": "dev.azariadev.extrabiomegen.ExtraBiomeGenMixinPlugin",
     "mixins": [
-
+        "terrablender.LevelUtilsMixin"
     ],
     "client": [
 

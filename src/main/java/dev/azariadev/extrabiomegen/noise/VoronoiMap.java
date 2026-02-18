@@ -13,8 +13,8 @@ public class VoronoiMap {
     private final int _seed;
     private final int _cellSize;
 
-    private double _warpScale = 0.10;
-    private double _warpStrength = 9;
+    private double _warpScale = 0.08;
+    private double _warpStrength = 8;
 
     private final FastNoiseLite _valueNoise;
 
