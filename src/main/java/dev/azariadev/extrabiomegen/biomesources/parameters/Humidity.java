@@ -10,6 +10,23 @@ public enum Humidity {
     HUMID,
     LUSH;
 
+    @Override
+    public String toString () {
+        return super.toString().toLowerCase();
+    }
+
+    public static Humidity parse (int value) {
+        switch (value) {
+            case 0: return ARID;
+            case 1: return DRY;
+            case 2: return NORMAL;
+            case 3: return WET;
+            case 4: return HUMID;
+            case 5: return LUSH;
+            default: return null;
+        }
+    }
+
     public static final Codec<Humidity> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {

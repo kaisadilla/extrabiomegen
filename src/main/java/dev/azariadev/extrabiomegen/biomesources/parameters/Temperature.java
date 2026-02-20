@@ -11,6 +11,22 @@ public enum Temperature {
     WARM,
     HOT;
 
+    @Override
+    public String toString () {
+        return super.toString().toLowerCase();
+    }
+
+    public static Temperature parse (int value) {
+        switch (value) {
+            case 0: return FROZEN;
+            case 1: return COLD;
+            case 2: return NORMAL;
+            case 3: return WARM;
+            case 4: return HOT;
+            default: return null;
+        }
+    }
+
     public static final Codec<Temperature> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {

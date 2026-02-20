@@ -8,6 +8,11 @@ public enum BiomePlacementMode {
     VORONOI,
     MIXED;
 
+    @Override
+    public String toString () {
+        return super.toString().toLowerCase();
+    }
+
     public static final Codec<BiomePlacementMode> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {

@@ -1,5 +1,6 @@
 package dev.azariadev.extrabiomegen.biomesources;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.azariadev.extrabiomegen.biomesources.parameters.*;
@@ -7,7 +8,9 @@ import dev.azariadev.extrabiomegen.noise.VoronoiMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.QuartPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
@@ -85,14 +88,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
             Codec.unboundedMap(
                 Temperature.CODEC,
                 Codec.unboundedMap(
-                    LandHumidity.CODEC,
-                    Biome.CODEC.listOf()
-                )
-            ).fieldOf("river").forGetter(bs -> bs._riverDef),
-
-            Codec.unboundedMap(
-                Temperature.CODEC,
-                Codec.unboundedMap(
                     OceanContinentalness.CODEC,
                     Biome.CODEC.listOf()
                 )
@@ -143,7 +138,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
 
         ).apply(instance, MultiNoiseDiscreteBiomeSource::new));
 
-    private final Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> _riverDef;
     private final Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> _oceanDef;
     private final Map<Temperature, List<Holder<Biome>>> _exoticDef;
     private final Map<LandContinentalness, Map<Erosion, Map<Temperature, Map<LandHumidity, Map<Weirdness, List<Holder<Biome>>>>>>> _landDef;
@@ -155,10 +149,21 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private BiomePlacementMode _landPlacementMode;
 
     private final Set<Holder<Biome>> _possibleBiomes = new HashSet<>();
-    private final Holder<Biome>[][][] _riverBiomes;
     private final Holder<Biome>[][][] _oceanBiomes;
     private final Holder<Biome>[][] _exoticBiomes;
+    /**
+     * [LandContinentalness][Erosion][Temperature][LandHumidity][Weirdness][Region].
+     * The region array may contain null values in w = 6 ('river_override'),
+     * representing no river override.
+     */
     private final Holder<Biome>[][][][][][] _landBiomes;
+    /**
+     * [CaveDepth][Continentalness][Erosion][Temperature][Humidity][Region].
+     * <p>
+     * The humidity array may contain null values, representing no cave biomes
+     * available for that set of parameters.
+     * </p>
+     */
     private final Holder<Biome>[][][][]@Nullable[][] _caveBiomes;
 
     private final VoronoiMap _regionNoise;
@@ -169,7 +174,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     public MultiNoiseDiscreteBiomeSource (
         int regionSize,
         int biomeSize,
-        Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef,
         Map<Temperature, Map<OceanContinentalness, List<Holder<Biome>>>> oceanDef,
         Map<Temperature, List<Holder<Biome>>> exoticDef,
         BiomePlacementMode landPlacementMode,
@@ -178,7 +182,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     ) {
         _regionSize = regionSize;
         _biomeSize = biomeSize;
-        _riverDef = riverDef;
         _oceanDef = oceanDef;
         _exoticDef = exoticDef;
         _landPlacementMode = landPlacementMode;
@@ -193,7 +196,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         _regionNoise.setWarpStrength(50f);
         _biomeMap = new VoronoiMap((int)seed, biomeSize);
 
-        _riverBiomes = buildRiverBiomeArray(riverDef);
         _oceanBiomes = buildOceanBiomeArray(oceanDef);
         _exoticBiomes = buildExoticBiomeArray(exoticDef);
         _landBiomes = buildLandBiomeArray(landDef);
@@ -233,14 +235,20 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
             if (biome != null) return biome;
         }
 
-        if (isRiver(w, c, e)) return getRiver(t, h, r);
+        if (isRiver(w, c, e)) {
+            switch (_landPlacementMode) {
+                case TERRAIN: return getRiver(c, e, t, h, r);
+                case VORONOI: return getRiverVoronoi(sampler, x, z);
+                case MIXED: return getRiverVoronoi(sampler, x, z);
+            }
+        }
         if (c < CONT_DEEP_OCEAN) return getExotic(t, r);
         if (c < CONT_COAST) return getOcean(t, c, r);
 
         switch (_landPlacementMode) {
             case TERRAIN: return getLand(c, e, t, h, w, r);
-            case VORONOI: return getLandVoronoi(x, z, sampler);
-            case MIXED: return getLandVoronoi(x, z, sampler);
+            case VORONOI: return getLandVoronoi(sampler, x, z);
+            case MIXED: return getLandMixed(sampler, x, z, c, w);
         }
 
         throw new IllegalStateException("Unhandled land placement mode.");
@@ -270,9 +278,49 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
             && continentalness < RIVER_CONT_COAST;
     }
 
-    private Holder<Biome> getRiver (long temperature, long humidity, double region) {
-        var arr = _riverBiomes[temperatureLevel(temperature)][landHumidityLevel(humidity)];
-        return arr[getBiomeFromRegion(region, arr.length)];
+    private Holder<Biome> getRiver (
+        long continentalness,
+        long erosion,
+        long temperature,
+        long humidity,
+        double region
+    ) {
+        var landArr = _landBiomes
+            [landContinentalnessLevel(continentalness)]
+            [erosionLevel(erosion)]
+            [temperatureLevel(temperature)]
+            [landHumidityLevel(humidity)]
+            [6]; // river_override
+
+        return landArr[getBiomeFromRegion(region, landArr.length)];
+
+        //var riverArr = _riverBiomes[temperatureLevel(temperature)]
+        //    [landHumidityLevel(humidity)];
+        //return riverArr[getBiomeFromRegion(region, riverArr.length)];
+    }
+
+    private Holder<Biome> getRiverVoronoi (Climate.Sampler sampler, int x, int z) {
+        int[] center = new int[2];
+        _biomeMap.getCellOrigin(x, z, center);
+
+        int xi = center[0];
+        int zi = center[1];
+
+        var target = sampler.sample(xi, 256, zi); // TODO: No hardcode.
+        var c = target.continentalness();
+        var e = target.erosion();
+        var t = target.temperature();
+        var h = target.humidity();
+        var r = getRegion(xi, zi);
+
+        var arr = _landBiomes
+            [landContinentalnessLevel(c)]
+            [erosionLevel(e)]
+            [temperatureLevel(t)]
+            [landHumidityLevel(h)]
+            [6]; // river_override
+
+        return arr[getBiomeFromRegion(r, arr.length)];
     }
 
     private Holder<Biome> getExotic (long temperature, double region) {
@@ -283,35 +331,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private Holder<Biome> getOcean (long temperature, long depth, double region) {
         var arr = _oceanBiomes[temperatureLevel(temperature)][oceanContinentalnessLevel(depth)];
         return arr[getBiomeFromRegion(region, arr.length)];
-    }
-
-    private Holder<Biome> getLandVoronoi (int x, int z, Climate.Sampler sampler) {
-        int[] center = new int[2];
-        _biomeMap.getCellOrigin(x, z, center);
-
-        int xi = center[0];
-        int zi = center[1];
-
-        long lcenter = ((long)xi << 32) | (zi & 0xffffffffL);
-
-        var biome = _existingOrigins.get(lcenter);
-        if (biome != null) {
-            return biome;
-        }
-
-        var target = sampler.sample(xi, 256, zi); // TODO: No hardcode.
-        var d = target.depth();
-        var c = target.continentalness();
-        var e = target.erosion();
-        var t = target.temperature();
-        var h = target.humidity();
-        var w = target.weirdness();
-        var r = getRegion(xi, zi);
-
-        biome = getLand(c, e, t, h, w, r);
-        _existingOrigins.putIfAbsent(lcenter, biome);
-
-        return biome;
     }
 
     private Holder<Biome> getLand (
@@ -330,6 +349,54 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
             [weirdnessLevel(weirdness)];
 
         return arr[getBiomeFromRegion(region, arr.length)];
+    }
+
+    private Holder<Biome> getLandVoronoi (Climate.Sampler sampler, int x, int z) {
+        int[] center = new int[2];
+        _biomeMap.getCellOrigin(x, z, center);
+
+        int xi = center[0];
+        int zi = center[1];
+
+        long lcenter = ((long)xi << 32) | (zi & 0xffffffffL);
+
+        var biome = _existingOrigins.get(lcenter);
+        if (biome != null) {
+            return biome;
+        }
+
+        var target = sampler.sample(xi, 256, zi); // TODO: No hardcode.
+        var c = target.continentalness();
+        var e = target.erosion();
+        var t = target.temperature();
+        var h = target.humidity();
+        var w = target.weirdness();
+        var r = getRegion(xi, zi);
+
+        biome = getLand(c, e, t, h, w, r);
+        _existingOrigins.putIfAbsent(lcenter, biome);
+
+        return biome;
+    }
+
+    private Holder<Biome> getLandMixed (
+        Climate.Sampler sampler, int x, int z, long c, long w
+    ) {
+        int[] center = new int[2];
+        _biomeMap.getCellOrigin(x, z, center);
+
+        int xi = center[0];
+        int zi = center[1];
+
+        var target = sampler.sample(xi, 256, zi); // TODO: No hardcode.
+        var e = target.erosion();
+        var t = target.temperature();
+        var h = target.humidity();
+        var r = getRegion(xi, zi);
+
+        var biome = getLand(c, e, t, h, w, r);
+
+        return biome;
     }
 
     private @Nullable Holder<Biome> getCaveOrNull (
@@ -428,12 +495,13 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         if (weirdness < WEIRD_NORMAL_INNER_VALLEY) return 3;
         if (weirdness < WEIRD_NORMAL_RIVER_BANK) return 4;
         if (weirdness < WEIRD_VAR_RIVER_BANK) return 5;
-        if (weirdness < WEIRD_VAR_INNER_VALLEY) return 6;
-        if (weirdness < WEIRD_VAR_INNER_SLOPE) return 7;
-        if (weirdness < WEIRD_VAR_OUTER_PEAK) return 8;
-        if (weirdness < WEIRD_VAR_OUTER_SLOPE) return 9;
-        if (weirdness < WEIRD_VAR_OUTER_VALLEY) return 10;
-        return 11;
+        // #6 is 'river_override', which is ignored here.
+        if (weirdness < WEIRD_VAR_INNER_VALLEY) return 7;
+        if (weirdness < WEIRD_VAR_INNER_SLOPE) return 8;
+        if (weirdness < WEIRD_VAR_OUTER_PEAK) return 9;
+        if (weirdness < WEIRD_VAR_OUTER_SLOPE) return 10;
+        if (weirdness < WEIRD_VAR_OUTER_VALLEY) return 11;
+        return 12;
     }
     // endregion Parameter levels
 
@@ -452,33 +520,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
 
                 arr[v.ordinal()] = arr[v.ordinal() - 1];
             }
-        }
-
-        return arr;
-    }
-
-    private Holder<Biome>[][][] buildRiverBiomeArray (Map<Temperature, Map<LandHumidity, List<Holder<Biome>>>> riverDef) {
-        var tempValues = Temperature.values();
-        var humValues = LandHumidity.values();
-
-        Holder<Biome>[][][] arr = new Holder[tempValues.length][humValues.length][];
-
-        Map<LandHumidity, List<Holder<Biome>>>[] temperatures
-            = unwrap(riverDef, tempValues, Map[]::new);
-
-        for (int t = 0; t < tempValues.length; t++) {
-            var temp = temperatures[t];
-
-            List<Holder<Biome>>[] humidities = unwrap(temp, humValues, List[]::new);
-
-            for (int h = 0; h < humidities.length; h++) {
-                List<Holder<Biome>> biomes = humidities[h];
-
-                arr[t][h] = biomes.toArray(Holder[]::new);
-
-                _possibleBiomes.addAll(biomes);
-            }
-
         }
 
         return arr;
@@ -629,4 +670,43 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         return arr;
     }
     // endregion Decode
+
+    @Override
+    public void addDebugInfo (
+        List<String> info, BlockPos pos, Climate.Sampler sampler
+    ) {
+        var point = sampler.sample(
+            QuartPos.fromBlock(pos.getX()),
+            QuartPos.fromBlock(pos.getY()),
+            QuartPos.fromBlock(pos.getZ())
+        );
+
+        int c = continentalnessLevel(point.continentalness());
+        int e = erosionLevel(point.erosion());
+        int t = temperatureLevel(point.temperature());
+        int h = humidityLevel(point.humidity());
+        int w = weirdnessLevel(point.weirdness());
+
+        var ec = Continentalness.parse(c);
+        var ee = Erosion.parse(e);
+        var et = Temperature.parse(t);
+        var eh = Humidity.parse(h);
+        var ew = Weirdness.parse(w);
+
+        info.add(
+            String.format("Biome builder: C: %s, E: %s, T: %s, H: %s, W: %s",
+                ec != null ? ec.toString() : c,
+                ee != null ? ee.toString() : e,
+                et != null ? et.toString() : t,
+                eh != null ? eh.toString() : h,
+                ew != null ? ew.toString() : w
+            )
+        );
+
+        info.add(
+            String.format("Biome placement mode: Land: %s",
+                _landPlacementMode.toString()
+            )
+        );
+    }
 }

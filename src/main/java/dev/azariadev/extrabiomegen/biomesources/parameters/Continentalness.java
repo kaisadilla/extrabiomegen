@@ -12,6 +12,25 @@ public enum Continentalness {
     INTERIOR,
     DEEP_INTERIOR;
 
+    @Override
+    public String toString () {
+        return super.toString().toLowerCase();
+    }
+
+    public static Continentalness parse (int value) {
+        switch (value) {
+            case 0: return EXOTIC;
+            case 1: return DEEP_OCEAN;
+            case 2: return OCEAN;
+            case 3: return COAST;
+            case 4: return LOWLAND;
+            case 5: return HIGHLAND;
+            case 6: return INTERIOR;
+            case 7: return DEEP_INTERIOR;
+            default: return null;
+        }
+    }
+
     public static final Codec<Continentalness> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {

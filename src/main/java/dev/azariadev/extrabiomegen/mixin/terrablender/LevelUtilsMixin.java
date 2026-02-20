@@ -50,6 +50,9 @@ public abstract class LevelUtilsMixin {
         CallbackInfo ci
     ) {
         var regionType = LevelUtils.getRegionTypeForDimension(dimensionType);
+
+        if ((chunkGenerator instanceof NoiseBasedChunkGenerator) == false) return;
+
         var chunkGen = (NoiseBasedChunkGenerator)chunkGenerator;
         var genSettings = chunkGen.generatorSettings().value();
         ((IExtendedNoiseGeneratorSettings)(Object)genSettings).setRegionType(regionType);

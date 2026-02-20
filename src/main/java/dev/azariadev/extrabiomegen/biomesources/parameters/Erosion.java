@@ -11,6 +11,24 @@ public enum Erosion {
     SMOOTH,
     FLAT;
 
+    @Override
+    public String toString () {
+        return super.toString().toLowerCase();
+    }
+
+    public static Erosion parse (int value) {
+        switch (value) {
+            case 0: return JAGGED;
+            case 1: return RUGGED;
+            case 2: return CRAGGY;
+            case 3: return NORMAL;
+            case 4: return ROLLING;
+            case 5: return SMOOTH;
+            case 6: return FLAT;
+            default: return null;
+        }
+    }
+
     public static final Codec<Erosion> CODEC = Codec.STRING.xmap(
         str -> {
             switch (str) {
