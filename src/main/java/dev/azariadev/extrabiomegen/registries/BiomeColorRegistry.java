@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BiomeColorRegistry {
-    private static final Gson GSON = new Gson();
     private static final Map<ResourceLocation, Integer> COLORS = new HashMap<>();
 
     public static int getColor (ResourceLocation biome) {

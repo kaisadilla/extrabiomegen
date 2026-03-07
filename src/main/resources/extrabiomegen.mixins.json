@@ -6,7 +6,8 @@
     "compatibilityLevel": "JAVA_17",
     "plugin": "dev.azariadev.extrabiomegen.ExtraBiomeGenMixinPlugin",
     "mixins": [
-        "terrablender.LevelUtilsMixin"
+        "terrablender.LevelUtilsMixin",
+        "MultiNoiseBiomeSourceMixin"
     ],
     "client": [
 

@@ -29,49 +29,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     private static final long RIVER_CONT_INLAND = Climate.quantizeCoord(-0.03f);
     private static final long RIVER_EROSION_LOW = Climate.quantizeCoord(-0.375f);
     private static final long RIVER_EROSION_HIGH = Climate.quantizeCoord(0.55f);
-
-    private static final long DEPTH_SHALLOW = Climate.quantizeCoord(0.1f);
-    private static final long DEPTH_NORMAL = Climate.quantizeCoord(0.55f);
-    private static final long DEPTH_DEEP = Climate.quantizeCoord(1f);
-    private static final long DEPTH_VERY_DEEP = Climate.quantizeCoord(1.15f);
-
-    private static final long CONT_DEEP_OCEAN = Climate.quantizeCoord(-1.05f);
-    private static final long CONT_SHALLOW_OCEAN = Climate.quantizeCoord(-0.455f);
-    private static final long CONT_COAST = Climate.quantizeCoord(-0.19f);
-    private static final long CONT_LOWLAND = Climate.quantizeCoord(-0.11f);
-    private static final long CONT_HIGHLAND = Climate.quantizeCoord(0.03f);
-    private static final long CONT_INTERIOR = Climate.quantizeCoord(0.3f);
-    private static final long CONT_DEEP_INTERIOR = Climate.quantizeCoord(0.7f);
-
-    private static final long EROSION_RUGGED = Climate.quantizeCoord(-0.7799f);
-    private static final long EROSION_CRAGGY = Climate.quantizeCoord(-0.375f);
-    private static final long EROSION_NORMAL = Climate.quantizeCoord(-0.2225f);
-    private static final long EROSION_ROLLING = Climate.quantizeCoord(0.05f);
-    private static final long EROSION_SMOOTH = Climate.quantizeCoord(0.45f);
-    private static final long EROSION_FLAT = Climate.quantizeCoord(0.55f);
-
-    private static final long TEMP_COLD = Climate.quantizeCoord(-0.45f);
-    private static final long TEMP_NORMAL = Climate.quantizeCoord(-0.15f);
-    private static final long TEMP_WARM = Climate.quantizeCoord(0.2f);
-    private static final long TEMP_HOT = Climate.quantizeCoord(0.55f);
-
-    private static final long HUMIDITY_DRY = Climate.quantizeCoord(-0.35f);
-    private static final long HUMIDITY_NORMAL = Climate.quantizeCoord(-0.1f);
-    private static final long HUMIDITY_WET = Climate.quantizeCoord(0.1f);
-    private static final long HUMIDITY_HUMID = Climate.quantizeCoord(0.3f);
-    private static final long HUMIDITY_LUSH = Climate.quantizeCoord(0.5f);
-
-    private static final long WEIRD_NORMAL_OUTER_SLOPE = Climate.quantizeCoord(-0.9333f);
-    private static final long WEIRD_NORMAL_OUTER_PEAK = Climate.quantizeCoord(-0.7666f);
-    private static final long WEIRD_NORMAL_INNER_SLOPE = Climate.quantizeCoord(-0.5666f);
-    private static final long WEIRD_NORMAL_INNER_VALLEY = Climate.quantizeCoord(-0.4f);
-    private static final long WEIRD_NORMAL_RIVER_BANK = Climate.quantizeCoord(-0.2666f);
-    private static final long WEIRD_VAR_RIVER_BANK = Climate.quantizeCoord(0f);
-    private static final long WEIRD_VAR_INNER_VALLEY = Climate.quantizeCoord(0.2666f);
-    private static final long WEIRD_VAR_INNER_SLOPE = Climate.quantizeCoord(0.4f);
-    private static final long WEIRD_VAR_OUTER_PEAK = Climate.quantizeCoord(0.5666f);
-    private static final long WEIRD_VAR_OUTER_SLOPE = Climate.quantizeCoord(0.7666f);
-    private static final long WEIRD_VAR_OUTER_VALLEY = Climate.quantizeCoord(0.9333f);
     // endregion Thresholds
 
     // region Codec
@@ -230,7 +187,7 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         var r = getRegion(x, z);
 
         // Cave biomes.
-        if (d > DEPTH_SHALLOW) {
+        if (d > TerrainParams.DEPTH_SHALLOW) {
             var biome = getCaveOrNull(d, c, e, t, h, r);
             if (biome != null) return biome;
         }
@@ -242,8 +199,8 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
                 case MIXED: return getRiverVoronoi(sampler, x, z);
             }
         }
-        if (c < CONT_DEEP_OCEAN) return getExotic(t, r);
-        if (c < CONT_COAST) return getOcean(t, c, r);
+        if (c < TerrainParams.CONT_DEEP_OCEAN) return getExotic(t, r);
+        if (c < TerrainParams.CONT_COAST) return getOcean(t, c, r);
 
         switch (_landPlacementMode) {
             case TERRAIN: return getLand(c, e, t, h, w, r);
@@ -286,10 +243,10 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         double region
     ) {
         var landArr = _landBiomes
-            [landContinentalnessLevel(continentalness)]
-            [erosionLevel(erosion)]
-            [temperatureLevel(temperature)]
-            [landHumidityLevel(humidity)]
+            [TerrainParams.landContinentalnessLevel(continentalness)]
+            [TerrainParams.erosionLevel(erosion)]
+            [TerrainParams.temperatureLevel(temperature)]
+            [TerrainParams.landHumidityLevel(humidity)]
             [6]; // river_override
 
         return landArr[getBiomeFromRegion(region, landArr.length)];
@@ -314,22 +271,25 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         var r = getRegion(xi, zi);
 
         var arr = _landBiomes
-            [landContinentalnessLevel(c)]
-            [erosionLevel(e)]
-            [temperatureLevel(t)]
-            [landHumidityLevel(h)]
+            [TerrainParams.landContinentalnessLevel(c)]
+            [TerrainParams.erosionLevel(e)]
+            [TerrainParams.temperatureLevel(t)]
+            [TerrainParams.landHumidityLevel(h)]
             [6]; // river_override
 
         return arr[getBiomeFromRegion(r, arr.length)];
     }
 
     private Holder<Biome> getExotic (long temperature, double region) {
-        var arr = _exoticBiomes[temperatureLevel(temperature)];
+        var arr = _exoticBiomes[TerrainParams.temperatureLevel(temperature)];
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
     private Holder<Biome> getOcean (long temperature, long depth, double region) {
-        var arr = _oceanBiomes[temperatureLevel(temperature)][oceanContinentalnessLevel(depth)];
+        var arr = _oceanBiomes
+            [TerrainParams.temperatureLevel(temperature)]
+            [TerrainParams.oceanContinentalnessLevel(depth)];
+
         return arr[getBiomeFromRegion(region, arr.length)];
     }
 
@@ -342,11 +302,11 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         double region
     ) {
         var arr = _landBiomes
-            [landContinentalnessLevel(continentalness)]
-            [erosionLevel(erosion)]
-            [temperatureLevel(temperature)]
-            [landHumidityLevel(humidity)]
-            [weirdnessLevel(weirdness)];
+            [TerrainParams.landContinentalnessLevel(continentalness)]
+            [TerrainParams.erosionLevel(erosion)]
+            [TerrainParams.temperatureLevel(temperature)]
+            [TerrainParams.landHumidityLevel(humidity)]
+            [TerrainParams.weirdnessLevel(weirdness)];
 
         return arr[getBiomeFromRegion(region, arr.length)];
     }
@@ -408,11 +368,11 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
         double region
     ) {
         var arr = _caveBiomes
-            [depthLevel(depth)]
-            [continentalnessLevel(continentalness)]
-            [erosionLevel(erosion)]
-            [temperatureLevel(temperature)]
-            [humidityLevel(humidity)];
+            [TerrainParams.depthLevel(depth)]
+            [TerrainParams.continentalnessLevel(continentalness)]
+            [TerrainParams.erosionLevel(erosion)]
+            [TerrainParams.temperatureLevel(temperature)]
+            [TerrainParams.humidityLevel(humidity)];
 
         if (arr == null) return null;
         return arr[getBiomeFromRegion(region, arr.length)];
@@ -423,86 +383,6 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
     }
 
     // region Parameter levels
-    private int depthLevel (long depth) {
-        if (depth < DEPTH_NORMAL) return 0;
-        if (depth < DEPTH_DEEP) return 1;
-        if (depth < DEPTH_VERY_DEEP) return 2;
-        return 3;
-    }
-
-    private int continentalnessLevel (long continentalness) {
-        if (continentalness < CONT_DEEP_OCEAN) return 0;
-        if (continentalness < CONT_SHALLOW_OCEAN) return 1;
-        if (continentalness < CONT_COAST) return 2;
-        if (continentalness < CONT_LOWLAND) return 3;
-        if (continentalness < CONT_HIGHLAND) return 4;
-        if (continentalness < CONT_INTERIOR) return 5;
-        if (continentalness < CONT_DEEP_INTERIOR) return 6;
-        return 7;
-    }
-
-    private int oceanContinentalnessLevel (long continentalness) {
-        if (continentalness < CONT_SHALLOW_OCEAN) return 1;
-        return 0;
-    }
-
-    private int landContinentalnessLevel (long continentalness) {
-        if (continentalness < CONT_LOWLAND) return 0;
-        if (continentalness < CONT_HIGHLAND) return 1;
-        if (continentalness < CONT_INTERIOR) return 2;
-        return 3;
-    }
-
-    private int erosionLevel (long erosion) {
-        if (erosion < EROSION_RUGGED) return 0;
-        if (erosion < EROSION_CRAGGY) return 1;
-        if (erosion < EROSION_NORMAL) return 2;
-        if (erosion < EROSION_ROLLING) return 3;
-        if (erosion < EROSION_SMOOTH) return 4;
-        if (erosion < EROSION_FLAT) return 5;
-        return 6;
-    }
-
-    private int temperatureLevel (long temperature) {
-        if (temperature < TEMP_COLD) return 0;
-        if (temperature < TEMP_NORMAL) return 1;
-        if (temperature < TEMP_WARM) return 2;
-        if (temperature < TEMP_HOT) return 3;
-        return 4;
-    }
-
-    private int humidityLevel (long humidity) {
-        if (humidity < HUMIDITY_DRY) return 0;
-        if (humidity < HUMIDITY_NORMAL) return 1;
-        if (humidity < HUMIDITY_WET) return 2;
-        if (humidity < HUMIDITY_HUMID) return 3;
-        if (humidity < HUMIDITY_LUSH) return 4;
-        return 5;
-    }
-
-    private int landHumidityLevel (long humidity) {
-        if (humidity < HUMIDITY_DRY) return 0;
-        if (humidity < HUMIDITY_NORMAL) return 1;
-        if (humidity < HUMIDITY_WET) return 2;
-        if (humidity < HUMIDITY_HUMID) return 3;
-        return 4;
-    }
-
-    private int weirdnessLevel (long weirdness) {
-        if (weirdness < WEIRD_NORMAL_OUTER_SLOPE) return 0;
-        if (weirdness < WEIRD_NORMAL_OUTER_PEAK) return 1;
-        if (weirdness < WEIRD_NORMAL_INNER_SLOPE) return 2;
-        if (weirdness < WEIRD_NORMAL_INNER_VALLEY) return 3;
-        if (weirdness < WEIRD_NORMAL_RIVER_BANK) return 4;
-        if (weirdness < WEIRD_VAR_RIVER_BANK) return 5;
-        // #6 is 'river_override', which is ignored here.
-        if (weirdness < WEIRD_VAR_INNER_VALLEY) return 7;
-        if (weirdness < WEIRD_VAR_INNER_SLOPE) return 8;
-        if (weirdness < WEIRD_VAR_OUTER_PEAK) return 9;
-        if (weirdness < WEIRD_VAR_OUTER_SLOPE) return 10;
-        if (weirdness < WEIRD_VAR_OUTER_VALLEY) return 11;
-        return 12;
-    }
     // endregion Parameter levels
 
     // region Decode
@@ -681,11 +561,11 @@ public class MultiNoiseDiscreteBiomeSource extends BiomeSource {
             QuartPos.fromBlock(pos.getZ())
         );
 
-        int c = continentalnessLevel(point.continentalness());
-        int e = erosionLevel(point.erosion());
-        int t = temperatureLevel(point.temperature());
-        int h = humidityLevel(point.humidity());
-        int w = weirdnessLevel(point.weirdness());
+        int c = TerrainParams.continentalnessLevel(point.continentalness());
+        int e = TerrainParams.erosionLevel(point.erosion());
+        int t = TerrainParams.temperatureLevel(point.temperature());
+        int h = TerrainParams.humidityLevel(point.humidity());
+        int w = TerrainParams.weirdnessLevel(point.weirdness());
 
         var ec = Continentalness.parse(c);
         var ee = Erosion.parse(e);

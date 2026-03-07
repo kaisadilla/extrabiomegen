@@ -3,6 +3,7 @@ package dev.azariadev.extrabiomegen;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import dev.azariadev.extrabiomegen.commands.ExtraBiomeGenCmd;
+import dev.azariadev.extrabiomegen.commands.InfoBiomeCmd;
 import dev.azariadev.extrabiomegen.registries.BiomeColorReloadListener;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -50,6 +51,7 @@ public class Main  {
     @SubscribeEvent
     public void onRegisterCommands (RegisterCommandsEvent evt) {
         ExtraBiomeGenCmd.register(evt.getDispatcher());
+        InfoBiomeCmd.register(evt.getDispatcher(), evt.getBuildContext());
     }
 
     public void addReloadListeners (AddReloadListenerEvent evt) {
